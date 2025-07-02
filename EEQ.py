@@ -1,14 +1,14 @@
 import streamlit as st
 import pandas as pd
-import xgboost as xgb
 import shap
 import matplotlib.pyplot as plt
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 import numpy as np
 
 # 数据上传和预处理
-st.title("XGBoost模型与SHAP分析")
+st.title("随机森林模型与SHAP分析")
 st.subheader("步骤1：上传CSV文件")
 
 uploaded_file = st.file_uploader("选择一个CSV文件", type=["csv"])
@@ -31,8 +31,8 @@ if uploaded_file is not None:
         # 数据集拆分
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         
-        # XGBoost模型训练
-        model = xgb.XGBRegressor(objective="reg:squarederror", random_state=42)
+        # 随机森林模型训练
+        model = RandomForestRegressor(n_estimators=100, random_state=42)
         model.fit(X_train, y_train)
         
         # 预测与评估
@@ -45,19 +45,22 @@ if uploaded_file is not None:
         # 计算 R²
         r2 = r2_score(y_test, y_pred)
         
-        st.subheader("步骤3：XGBoost模型结果")
+        st.subheader("步骤3：随机森林模型结果")
         st.write(f"RMSE: {rmse:.4f}")
         st.write(f"R²: {r2:.4f}")
         
         # 特征重要性
         st.subheader("特征重要性")
-        importance = model.get_booster().get_score(importance_type='weight')
-        importance_df = pd.DataFrame(importance.items(), columns=["Feature", "Importance"]).sort_values(by="Importance", ascending=False)
+        importance = model.feature_importances_
+        importance_df = pd.DataFrame({
+            'Feature': feature_columns,
+            'Importance': importance
+        }).sort_values(by="Importance", ascending=False)
         st.write(importance_df)
 
         # 绘制特征重要性图
         fig, ax = plt.subplots()
-        xgb.plot_importance(model, importance_type="weight", ax=ax)
+        ax.barh(importance_df['Feature'], importance_df['Importance'])
         st.pyplot(fig)
 
         # SHAP值分析
